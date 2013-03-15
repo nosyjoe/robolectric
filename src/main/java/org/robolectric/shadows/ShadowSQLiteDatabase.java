@@ -3,40 +3,22 @@ package org.robolectric.shadows;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
-import android.database.sqlite.SQLiteClosable;
-import android.database.sqlite.SQLiteCursor;
-import android.database.sqlite.SQLiteCursorDriver;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteDatabaseCorruptException;
-import android.database.sqlite.SQLiteQuery;
-import android.database.sqlite.SQLiteQueryBuilder;
-import android.database.sqlite.SQLiteStatement;
+import android.database.sqlite.*;
+import android.os.CancellationSignal;
 import org.robolectric.Robolectric;
 import org.robolectric.internal.Implementation;
 import org.robolectric.internal.Implements;
 import org.robolectric.internal.RealObject;
 import org.robolectric.util.DatabaseConfig;
-import org.robolectric.util.SQLite.SQLStringAndBindings;
+import org.robolectric.util.SQLite.*;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.WeakHashMap;
+import java.sql.*;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static org.robolectric.Robolectric.newInstanceOf;
 import static org.robolectric.Robolectric.shadowOf;
-import static org.robolectric.util.SQLite.buildDeleteString;
-import static org.robolectric.util.SQLite.buildInsertString;
-import static org.robolectric.util.SQLite.buildUpdateString;
-import static org.robolectric.util.SQLite.buildWhereClause;
+import static org.robolectric.util.SQLite.*;
 
 /**
  * Shadow for {@code SQLiteDatabase} that simulates the movement of a {@code Cursor} through database tables.
@@ -289,6 +271,23 @@ public class ShadowSQLiteDatabase  {
         shadowOf(cursor).setResultSet(resultSet, sqlBody);
         cursors.add(cursor);
         return cursor;
+    }
+
+    @Implementation
+    public Cursor rawQueryWithFactory (SQLiteDatabase.CursorFactory cursorFactory, String sql, String[] selectionArgs,
+                                       String editTable, CancellationSignal cancellationSignal) {
+        SQLiteDatabase.CursorFactory actualCursorFactory = cursorFactory;
+        if (actualCursorFactory == null) {
+            actualCursorFactory = new SQLiteDatabase.CursorFactory() {
+                @Override
+                public Cursor newCursor(SQLiteDatabase db,
+                                        SQLiteCursorDriver masterQuery, String editTable, SQLiteQuery query) {
+                    return new SQLiteCursor(db, masterQuery, editTable, query);
+                }
+
+            };
+        }
+        return rawQueryWithFactory(actualCursorFactory, sql, selectionArgs, editTable);
     }
 
     @Implementation
