@@ -280,6 +280,11 @@ public final class ShadowContentValues {
     }
 
     @Implementation
+    public Set<String> keySet() {
+        return values.keySet();
+    }
+
+    @Implementation
     public int describeContents() {
         return 0;
     }
